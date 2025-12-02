@@ -3188,41 +3188,47 @@ contains
       SUBROUTINE semi_lagrange_sedim(km,dzl,wwl,rql,precip,pfsan,dt,R1)
 !-------------------------------------------------------------------
 !
-! This routine is a semi-Lagrangain forward advection for hydrometeors
+! This routine is a semi-Lagrangian forward advection for hydrometeors
 ! with mass conservation and positive definite advection
 ! 2nd order interpolation with monotonic piecewise parabolic method is used.
 ! This routine is under assumption of decfl < 1 for semi_Lagrangian
 !
+! km     vertical dimension
 ! dzl    depth of model layer in meter
 ! wwl    terminal velocity at model layer m/s
 ! rql    dry air density*mixing ratio
-! precip precipitation at surface 
+! precip precipitation at surface
+! pfsan  (precipitation that has fallen from TOA to level k?)
 ! dt     time step
+! R1     small non-zero number (typically 1.0E-12)
 !
 ! author: hann-ming henry juang <henry.juang@noaa.gov>
 !         implemented by song-you hong
 ! reference: Juang, H.-M., and S.-Y. Hong, 2010: Forward semi-Lagrangian advection
 !         with mass conservation and positive definiteness for falling
-!         hydrometeors. *Mon.  Wea. Rev.*, *138*, 1778-1791
+!         hydrometeors. *Mon.  Wea. Rev.*, *138*, 1778-1791,
+!         https://doi.org/10.1175/2009MWR3109.1
 !
       implicit none
 
       integer, intent(in) :: km
       real, intent(in) ::  dt, R1
       real, intent(in) :: dzl(km),wwl(km)
-      real, intent(out) :: precip
       real, intent(inout) :: rql(km)
+      real, intent(out) :: precip
       real, intent(out)  :: pfsan(km)
-      integer  k,m,kk,kb,kt
-      real  tl,tl2,qql,dql,qqd
-      real  th,th2,qqh,dqh
-      real  zsum,qsum,dim,dip,con1,fa1,fa2
-      real  allold, decfl
-      real  dz(km), ww(km), qq(km)
-      real  wi(km+1), zi(km+1), za(km+2)
-      real  qn(km)
-      real  dza(km+1), qa(km+1), qmi(km+1), qpi(km+1)
-      real  net_flx(km)
+
+! Local variables
+      integer :: k,m,kk,kb,kt
+      real :: tl,tl2,qql,dql,qqd
+      real :: th,th2,qqh,dqh
+      real :: zsum,qsum,dim,dip,con1,fa1,fa2
+      real :: allold, decfl
+      real :: dz(km), ww(km), qq(km)
+      real :: wi(km+1), zi(km+1), za(km+2)
+      real :: qn(km)
+      real :: dza(km+1), qa(km+1), qmi(km+1), qpi(km+1)
+      real :: net_flx(km)
 !
       precip = 0.0
       qa(:) = 0.0
