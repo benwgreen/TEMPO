@@ -2468,8 +2468,8 @@ contains
                 do n = 1, niter
                     rr_tmp(:) = rr(:)
                     nr_tmp(:) = nr(:)
-                    call semi_lagrange_sedim(kte,dzq,vtrk,rr,rainsfc,pfll,dtcfl,R1)
-                    call semi_lagrange_sedim(kte,dzq,vtnrk,nr,vtr,pdummy,dtcfl,R2)
+                    call semi_lagrange_sedim(kte,dtcfl,R1,dzq,vtrk,rr,rainsfc,pfll)
+                    call semi_lagrange_sedim(kte,dtcfl,R2,dzq,vtnrk,nr,vtr,pdummy)
                     do k = kts, kte
                         orhodt = 1./(rho(k)*dt)
                         qrten(k) = qrten(k) + (rr(k) - rr_tmp(k)) * orhodt
@@ -2650,7 +2650,7 @@ contains
 
                 do n = 1, niter
                     rg_tmp(:) = rg(:)
-                    call semi_lagrange_sedim(kte,dzq,vtgk,rg,graulsfc,pfil,dtcfl,R1)
+                    call semi_lagrange_sedim(kte,dtcfl,R1,dzq,vtgk,rg,graulsfc,pfil)
                     do k = kts, kte
                         orhodt = 1./(rho(k)*dt)
                         qgten(k) = qgten(k) + (rg(k) - rg_tmp(k))*orhodt
@@ -3185,7 +3185,7 @@ contains
 
     !+---+-----------------------------------------------------------------+
 !-------------------------------------------------------------------
-      SUBROUTINE semi_lagrange_sedim(km,dzl,wwl,rql,precip,pfsan,dt,R1)
+      SUBROUTINE semi_lagrange_sedim(km,dt,R1,dzl,wwl,rql,precip,pfsan)
 !-------------------------------------------------------------------
 !
 ! This routine is a semi-Lagrangian forward advection for hydrometeors
@@ -3194,13 +3194,13 @@ contains
 ! This routine is under assumption of decfl < 1 for semi_Lagrangian
 !
 ! km     vertical dimension
+! dt     time step
+! R1     small non-zero number (typically 1.0E-12)
 ! dzl    depth of model layer in meter
 ! wwl    terminal velocity at model layer m/s
 ! rql    dry air density*mixing ratio
 ! precip precipitation at surface
 ! pfsan  (precipitation that has fallen from TOA to level k?)
-! dt     time step
-! R1     small non-zero number (typically 1.0E-12)
 !
 ! author: hann-ming henry juang <henry.juang@noaa.gov>
 !         implemented by song-you hong
