@@ -3185,7 +3185,7 @@ contains
 
     !+---+-----------------------------------------------------------------+
 !-------------------------------------------------------------------
-      SUBROUTINE semi_lagrange_sedim(km,dt,R1,dzl,wwl,rql,precip,pfsan)
+      SUBROUTINE semi_lagrange_sedim(km,dt,R1,dz,wwl,rql,precip,pfsan)
 !-------------------------------------------------------------------
 !
 ! This routine is a semi-Lagrangian forward advection for hydrometeors
@@ -3196,7 +3196,7 @@ contains
 ! km     vertical dimension
 ! dt     time step
 ! R1     small non-zero number (typically 1.0E-12)
-! dzl    depth of model layer in meter
+! dz     depth of model layer in meter
 ! wwl    terminal velocity at model layer m/s
 ! rql    dry air density*mixing ratio
 ! precip precipitation at surface
@@ -3211,29 +3211,28 @@ contains
 !
       implicit none
 
-      integer, intent(in) :: km
-      real, intent(in) ::  dt, R1
-      real, intent(in) :: dzl(km),wwl(km)
-      real, intent(inout) :: rql(km)
-      real, intent(out) :: precip
-      real, intent(out)  :: pfsan(km)
+      integer, intent(in   ) :: km
+      real,    intent(in   ) ::  dt, R1
+      real,    intent(in   ), dimension(km) :: dz, wwl
+      real,    intent(inout), dimension(km) :: rql
+      real,    intent(  out) :: precip
+      real,    intent(  out), dimension(km) :: pfsan
 
 ! Local variables
-      integer :: k,m,kk,kb,kt
-      real :: tl,tl2,qql,dql,qqd
-      real :: th,th2,qqh,dqh
-      real :: zsum,qsum,dim,dip,con1,fa1,fa2
+      integer :: k, m, kk, kb, kt
+      real :: tl, tl2, qql, dql, qqd
+      real :: th, th2, qqh, dqh
+      real :: zsum, qsum, dim, dip, con1, fa1, fa2
       real :: allold, decfl
-      real :: dz(km), ww(km), qq(km)
-      real :: wi(km+1), zi(km+1), za(km+2)
-      real :: qn(km)
-      real :: dza(km+1), qa(km+1), qmi(km+1), qpi(km+1)
-      real :: net_flx(km)
+      real, dimension(km) :: ww, qq, qn, net_flx
+      real, dimension(km+1) :: wi, zi, dza, qa, qmi, qpi
+      real, dimension(km+2) :: za
 !
       precip = 0.0
       qa(:) = 0.0
       qq(:) = 0.0
-      dz(:) = dzl(:)
+      pfsan(:) = 0.0
+      net_flx(:) = 0.0
       ww(:) = wwl(:)
       do k = 1,km
         if(rql(k).gt.R1) then 
@@ -3241,8 +3240,6 @@ contains
         else 
           ww(k) = 0.0 
         endif
-        pfsan(k) = 0.0
-        net_flx(k) = 0.0
       enddo
 ! skip for no precipitation for all layers
       allold = 0.0
@@ -3260,12 +3257,13 @@ contains
       enddo
 !     n=1
 ! plm is 2nd order, we can use 2nd order wi or 3rd order wi
-! 2nd order interpolation to get wi
-      wi(1) = ww(1)
-      wi(km+1) = ww(km)
-      do k=2,km
-        wi(k) = (ww(k)*dz(k-1)+ww(k-1)*dz(k))/(dz(k-1)+dz(k))
-      enddo
+! Comment out 2nd order (or third order) -- don't use both!
+!! 2nd order interpolation to get wi
+!      wi(1) = ww(1)
+!      wi(km+1) = ww(km)
+!      do k=2,km
+!        wi(k) = (ww(k)*dz(k-1)+ww(k-1)*dz(k))/(dz(k-1)+dz(k))
+!      enddo
 ! 3rd order interpolation to get wi
       fa1 = 9./16.
       fa2 = 1./16.
@@ -3300,11 +3298,11 @@ contains
         dza(k) = za(k+1)-za(k)
       enddo
 
-! computer deformation at arrival point
+! compute deformation at arrival point
       do k=1,km
         qa(k) = qq(k)*dz(k)/dza(k)
       enddo
-      qa(km+1) = 0.0
+      !qa(km+1) = 0.0 ! Not needed because array is initialized to zero and qa(km+1) isn't touched
 
 ! estimate values at arrival cell interface with monotone
       do k=2,km
@@ -3374,10 +3372,10 @@ contains
                  zsum  = (1.-tl)*dza(kb)
                  qsum  = dql*dza(kb)
                  if( kt-kb.gt.1 ) then
-                 do m=kb+1,kt-1
-                   zsum = zsum + dza(m)
-                   qsum = qsum + qa(m) * dza(m)
-                 enddo
+                   do m=kb+1,kt-1
+                     zsum = zsum + dza(m)
+                     qsum = qsum + qa(m) * dza(m)
+                   enddo
                  endif
                  th=(zi(k+1)-za(kt))/dza(kt)
                  th2=th*th
@@ -3395,16 +3393,16 @@ contains
 ! rain out
       sum_precip: do k=1,km
                     if( za(k).lt.0.0 .and. za(k+1).le.0.0 ) then
-                      precip = precip + qa(k)*dza(k)
                       net_flx(k) =  qa(k)*dza(k)
+                      precip = precip + net_flx(k)
                       cycle sum_precip
                     else if ( za(k).lt.0.0 .and. za(k+1).gt.0.0 ) then
                       th = (0.0-za(k))/dza(k)
                       th2 = th*th
                       qqd = 0.5*(qpi(k)-qmi(k))
                       qqh = qqd*th2+qmi(k)*th
-                      precip = precip + qqh*dza(k)
                       net_flx(k) = qqh*dza(k)
+                      precip = precip + net_flx(k)
                       exit sum_precip
                     endif
                     exit sum_precip
